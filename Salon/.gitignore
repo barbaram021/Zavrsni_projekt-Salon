@@ -2,3 +2,7 @@ Include/
 Lib/
 Scripts/
 pyvenv.cfg
+
+# Tajne / konfiguracija okoline — ne commitati
+.env
+Backend/.env
