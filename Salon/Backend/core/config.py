@@ -14,7 +14,7 @@ ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 
 
 class Settings(BaseSettings):
-    """Postavke spajanja na PostgreSQL bazu."""
+    """Postavke aplikacije (baza + JWT autentifikacija)."""
 
     model_config = SettingsConfigDict(
         env_file=ENV_PATH,
@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     postgres_db: str
+
+    # JWT autentifikacija. secret_key MORA doći iz .env (nema defaulta) —
+    # nikad ga ne držimo u kodu.
+    secret_key: str
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60
 
     @property
     def database_url(self) -> str:
