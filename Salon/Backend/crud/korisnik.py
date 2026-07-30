@@ -18,6 +18,29 @@ def get_korisnik_by_email(session: Session, email: str) -> KORISNIK | None:
     return session.exec(select(KORISNIK).where(KORISNIK.email == email)).first()
 
 
+def list_radnici(session: Session) -> list[RADNIK]:
+    """Svi radnici (i admini — jer admin ima RADNIK profil), sortirano po imenu."""
+    return list(
+        session.exec(select(RADNIK).order_by(RADNIK.prezime, RADNIK.ime)).all()
+    )
+
+
+def list_klijenti(session: Session) -> list[KLIJENT]:
+    """Svi klijenti, sortirano po imenu (za admina)."""
+    return list(
+        session.exec(select(KLIJENT).order_by(KLIJENT.prezime, KLIJENT.ime)).all()
+    )
+
+
+def get_klijent_or_404(session: Session, klijent_id: int) -> KLIJENT:
+    klijent = session.get(KLIJENT, klijent_id)
+    if klijent is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Klijent ne postoji."
+        )
+    return klijent
+
+
 def _ensure_email_free(session: Session, email: str) -> None:
     if get_korisnik_by_email(session, email) is not None:
         raise HTTPException(
