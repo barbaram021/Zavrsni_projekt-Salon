@@ -1,13 +1,8 @@
-"""Pydantic sheme za radno vrijeme radnika."""
-
 from datetime import time
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-
 class RadnoVrijemeCreate(BaseModel):
-    """Podaci za dodavanje intervala radnog vremena (admin)."""
-
     dan_u_tjednu: int = Field(ge=1, le=7, description="1=pon … 7=ned")
     vrijeme_od: time
     vrijeme_do: time
@@ -18,10 +13,7 @@ class RadnoVrijemeCreate(BaseModel):
             raise ValueError("vrijeme_od mora biti prije vrijeme_do.")
         return self
 
-
 class RadnoVrijemeOut(BaseModel):
-    """Prikaz intervala radnog vremena."""
-
     model_config = ConfigDict(from_attributes=True)
 
     radno_vrijeme_id: int

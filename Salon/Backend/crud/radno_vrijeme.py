@@ -1,12 +1,9 @@
-"""CRUD nad radnim vremenom radnika."""
-
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
 
 from crud.usluga import get_radnik_or_404
 from models.radno_vrijeme import RADNO_VRIJEME
 from schemas.radno_vrijeme import RadnoVrijemeCreate
-
 
 def list_radno_vrijeme(session: Session, radnik_id: int) -> list[RADNO_VRIJEME]:
     get_radnik_or_404(session, radnik_id)
@@ -17,13 +14,11 @@ def list_radno_vrijeme(session: Session, radnik_id: int) -> list[RADNO_VRIJEME]:
     )
     return list(session.exec(stmt).all())
 
-
 def create_radno_vrijeme(
     session: Session, radnik_id: int, data: RadnoVrijemeCreate
 ) -> RADNO_VRIJEME:
     get_radnik_or_404(session, radnik_id)
 
-    # Spriječi preklapanje s postojećim intervalom istog dana.
     postojeci = session.exec(
         select(RADNO_VRIJEME).where(
             RADNO_VRIJEME.radnik_id == radnik_id,
@@ -47,7 +42,6 @@ def create_radno_vrijeme(
     session.commit()
     session.refresh(rv)
     return rv
-
 
 def delete_radno_vrijeme(
     session: Session, radnik_id: int, radno_vrijeme_id: int

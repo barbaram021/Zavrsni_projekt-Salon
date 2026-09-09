@@ -1,9 +1,3 @@
-"""SQLModel model za REZERVACIJA + enum statusa.
-
-Klijent rezervira radnika za uslugu u određenom terminu. `kraj` računa
-poslužitelj iz početka i trajanja usluge; `status` je minimalan (AKTIVNA/OTKAZANA).
-"""
-
 from datetime import datetime
 from enum import Enum
 
@@ -11,17 +5,13 @@ from sqlalchemy import Column
 from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, SQLModel
 
-
 class StatusRezervacije(str, Enum):
-    """Vrijednosti Postgres ENUM tipa `status_rezervacije`."""
-
+    NEPOTVRDJENA = "NEPOTVRDJENA"
     AKTIVNA = "AKTIVNA"
     OTKAZANA = "OTKAZANA"
-
+    ISTEKLA = "ISTEKLA"
 
 class REZERVACIJA(SQLModel, table=True):
-    """Rezervacija termina: klijent + radnik + usluga u intervalu pocetak–kraj."""
-
     __tablename__ = "rezervacija"
 
     rezervacija_id: int | None = Field(default=None, primary_key=True)
@@ -35,6 +25,7 @@ class REZERVACIJA(SQLModel, table=True):
             SAEnum(StatusRezervacije, name="status_rezervacije", create_type=False),
             nullable=False,
         ),
-        default=StatusRezervacije.AKTIVNA,
+        default=StatusRezervacije.NEPOTVRDJENA,
     )
     napomena: str | None = Field(default=None, max_length=500)
+    rezervirano_do: datetime | None = Field(default=None)

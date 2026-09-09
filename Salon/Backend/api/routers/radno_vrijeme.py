@@ -1,5 +1,3 @@
-"""Router za radno vrijeme radnika (prefix /radnici)."""
-
 from fastapi import APIRouter, Depends, status
 from sqlmodel import Session
 
@@ -10,7 +8,6 @@ from models.korisnik import Uloga
 from schemas.radno_vrijeme import RadnoVrijemeCreate, RadnoVrijemeOut
 
 router = APIRouter(prefix="/radnici", tags=["radno-vrijeme"])
-
 
 @router.get(
     "/{radnik_id}/radno-vrijeme",
@@ -23,7 +20,6 @@ def list_radno_vrijeme(
     _=Depends(get_current_user),
 ) -> list:
     return crud.list_radno_vrijeme(session, radnik_id)
-
 
 @router.post(
     "/{radnik_id}/radno-vrijeme",
@@ -38,7 +34,6 @@ def create_radno_vrijeme(
     _=Depends(require_role(Uloga.ADMIN)),
 ):
     return crud.create_radno_vrijeme(session, radnik_id, data)
-
 
 @router.delete(
     "/{radnik_id}/radno-vrijeme/{radno_vrijeme_id}",

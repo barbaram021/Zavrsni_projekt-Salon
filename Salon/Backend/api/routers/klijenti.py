@@ -1,5 +1,3 @@
-"""Router za klijente: popis (samo admin — sadrži osobne podatke)."""
-
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
@@ -11,14 +9,12 @@ from schemas.korisnik import KlijentOut
 
 router = APIRouter(prefix="/klijenti", tags=["klijenti"])
 
-
 @router.get("", response_model=list[KlijentOut], summary="Popis klijenata (admin)")
 def list_klijenti_endpoint(
     session: Session = Depends(get_session),
     _=Depends(require_role(Uloga.ADMIN)),
 ) -> list:
     return list_klijenti(session)
-
 
 @router.get(
     "/{klijent_id}", response_model=KlijentOut, summary="Detalj klijenta (admin)"

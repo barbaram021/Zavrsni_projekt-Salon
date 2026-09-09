@@ -1,5 +1,3 @@
-"""Router za radnike: pregled (javno) i kreiranje (admin)."""
-
 from fastapi import APIRouter, Depends, status
 from sqlmodel import Session
 
@@ -13,16 +11,13 @@ from schemas.korisnik import RadnikOut
 
 router = APIRouter(prefix="/radnici", tags=["radnici"])
 
-
 @router.get("", response_model=list[RadnikOut], summary="Popis radnika")
 def list_radnici_endpoint(session: Session = Depends(get_session)) -> list:
     return list_radnici(session)
 
-
 @router.get("/{radnik_id}", response_model=RadnikOut, summary="Detalj radnika")
 def get_radnik_endpoint(radnik_id: int, session: Session = Depends(get_session)):
     return get_radnik_or_404(session, radnik_id)
-
 
 @router.post(
     "",
@@ -35,5 +30,4 @@ def create_radnik_endpoint(
     session: Session = Depends(get_session),
     _: KORISNIK = Depends(require_role(Uloga.ADMIN)),
 ) -> KORISNIK:
-    """Zaštićeno: samo prijavljeni admin može otvoriti novi radnički račun."""
     return create_radnik(session, data)

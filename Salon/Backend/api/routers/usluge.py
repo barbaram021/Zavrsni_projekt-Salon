@@ -1,9 +1,3 @@
-"""Routeri za usluge i vezu radnik–usluga.
-
-- `router` (prefix /usluge): katalog usluga; čitanje javno, izmjene admin.
-- `radnik_router` (prefix /radnici): dodjela usluga pojedinom radniku.
-"""
-
 from fastapi import APIRouter, Depends, status
 from sqlmodel import Session
 
@@ -17,16 +11,13 @@ from schemas.usluga import DodjelaUslugeIn, UslugaCreate, UslugaOut, UslugaUpdat
 router = APIRouter(prefix="/usluge", tags=["usluge"])
 radnik_router = APIRouter(prefix="/radnici", tags=["usluge"])
 
-
 @router.get("", response_model=list[UslugaOut], summary="Popis usluga")
 def list_usluge(session: Session = Depends(get_session)) -> list:
     return crud.list_usluge(session)
 
-
 @router.get("/{usluga_id}", response_model=UslugaOut, summary="Detalj usluge")
 def get_usluga(usluga_id: int, session: Session = Depends(get_session)):
     return crud.get_usluga_out(session, usluga_id)
-
 
 @router.get(
     "/{usluga_id}/radnici",
@@ -37,7 +28,6 @@ def list_radnici_za_uslugu(
     usluga_id: int, session: Session = Depends(get_session)
 ) -> list:
     return crud.list_radnici_za_uslugu(session, usluga_id)
-
 
 @router.post(
     "",
@@ -52,7 +42,6 @@ def create_usluga(
 ):
     return crud.create_usluga(session, data)
 
-
 @router.put("/{usluga_id}", response_model=UslugaOut, summary="Izmjena usluge (admin)")
 def update_usluga(
     usluga_id: int,
@@ -61,7 +50,6 @@ def update_usluga(
     _=Depends(require_role(Uloga.ADMIN)),
 ):
     return crud.update_usluga(session, usluga_id, data)
-
 
 @router.delete(
     "/{usluga_id}",
@@ -75,7 +63,6 @@ def delete_usluga(
 ):
     crud.delete_usluga(session, usluga_id)
 
-
 @radnik_router.get(
     "/{radnik_id}/usluge",
     response_model=list[UslugaOut],
@@ -83,7 +70,6 @@ def delete_usluga(
 )
 def list_usluge_radnika(radnik_id: int, session: Session = Depends(get_session)) -> list:
     return crud.list_usluge_radnika(session, radnik_id)
-
 
 @radnik_router.post(
     "/{radnik_id}/usluge",
@@ -98,7 +84,6 @@ def dodijeli_uslugu(
 ):
     crud.dodijeli_uslugu_radniku(session, radnik_id, data.usluga_id)
     return {"detail": "Usluga dodijeljena radniku."}
-
 
 @radnik_router.delete(
     "/{radnik_id}/usluge/{usluga_id}",

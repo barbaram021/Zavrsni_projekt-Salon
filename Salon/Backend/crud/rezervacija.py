@@ -1,27 +1,48 @@
-"""CRUD nad rezervacijama, uključujući provjeru dostupnosti termina.
-
-Kreiranje rezervacije provjerava (redom): postoji li usluga, nudi li je radnik,
-je li termin unutar radnog vremena radnika i ne preklapa li se s postojećom
-aktivnom rezervacijom.
-"""
-
 from datetime import date, datetime, time, timedelta
 
 from fastapi import HTTPException, status
+from sqlalchemy import or_, text, update
 from sqlmodel import Session, select
 
+from core.config import settings
 from crud.usluga import _veza_radnik_usluga, get_radnik_or_404, get_usluga_or_404
 from models.korisnik import KORISNIK, Uloga
 from models.radno_vrijeme import RADNO_VRIJEME
 from models.rezervacija import REZERVACIJA, StatusRezervacije
 from schemas.rezervacija import RezervacijaCreate
 
+def oznaci_istekle(session: Session, radnik_id: int | None = None) -> None:
+    stmt = (
+        update(REZERVACIJA)
+        .where(
+            REZERVACIJA.status == StatusRezervacije.NEPOTVRDJENA,
+            REZERVACIJA.rezervirano_do <= datetime.now(),
+        )
+        .values(status=StatusRezervacije.ISTEKLA, rezervirano_do=None)
+    )
+    if radnik_id is not None:
+        stmt = stmt.where(REZERVACIJA.radnik_id == radnik_id)
+
+    rezultat = session.execute(stmt)
+    if rezultat.rowcount:
+        session.commit()
+
+def _zakljucaj_raspored_radnika(session: Session, radnik_id: int) -> None:
+    session.execute(
+        text("SELECT pg_advisory_xact_lock(:kljuc)"), {"kljuc": int(radnik_id)}
+    )
+
+def _zauzima_termin():
+    return or_(
+        REZERVACIJA.status == StatusRezervacije.AKTIVNA,
+        (REZERVACIJA.status == StatusRezervacije.NEPOTVRDJENA)
+        & (REZERVACIJA.rezervirano_do > datetime.now()),
+    )
 
 def _provjeri_radno_vrijeme(
     session: Session, radnik_id: int, pocetak: datetime, kraj: datetime
 ) -> None:
-    """Termin mora cijeli stati unutar jednog intervala radnog vremena tog dana."""
-    dan = pocetak.isoweekday()  # 1=pon … 7=ned
+    dan = pocetak.isoweekday()
     intervali = session.exec(
         select(RADNO_VRIJEME).where(
             RADNO_VRIJEME.radnik_id == radnik_id,
@@ -38,25 +59,35 @@ def _provjeri_radno_vrijeme(
             detail="Termin je izvan radnog vremena radnika.",
         )
 
-
 def _provjeri_preklapanje(
-    session: Session, radnik_id: int, pocetak: datetime, kraj: datetime
+    session: Session,
+    radnik_id: int,
+    pocetak: datetime,
+    kraj: datetime,
+    *,
+    izuzmi_id: int | None = None,
 ) -> None:
-    """Radnik ne smije imati drugu AKTIVNU rezervaciju koja se vremenski preklapa."""
-    sukob = session.exec(
-        select(REZERVACIJA).where(
-            REZERVACIJA.radnik_id == radnik_id,
-            REZERVACIJA.status == StatusRezervacije.AKTIVNA,
-            REZERVACIJA.pocetak < kraj,
-            REZERVACIJA.kraj > pocetak,
-        )
-    ).first()
-    if sukob is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Radnik već ima rezervaciju u tom terminu.",
-        )
+    stmt = select(REZERVACIJA).where(
+        REZERVACIJA.radnik_id == radnik_id,
+        REZERVACIJA.pocetak < kraj,
+        REZERVACIJA.kraj > pocetak,
+        _zauzima_termin(),
+    )
+    if izuzmi_id is not None:
+        stmt = stmt.where(REZERVACIJA.rezervacija_id != izuzmi_id)
 
+    sukob = session.exec(stmt).first()
+    if sukob is None:
+        return
+
+    if sukob.status == StatusRezervacije.NEPOTVRDJENA:
+        detail = (
+            "Termin je privremeno rezerviran i čeka potvrdu drugog klijenta. "
+            "Pokušajte ponovno kasnije ili odaberite drugi termin."
+        )
+    else:
+        detail = "Radnik već ima rezervaciju u tom terminu."
+    raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
 def create_rezervacija(
     session: Session, klijent_id: int, data: RezervacijaCreate
@@ -64,7 +95,6 @@ def create_rezervacija(
     usluga = get_usluga_or_404(session, data.usluga_id)
     get_radnik_or_404(session, data.radnik_id)
 
-    # Radnik mora nuditi tu uslugu.
     if _veza_radnik_usluga(session, data.radnik_id, data.usluga_id) is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -79,6 +109,9 @@ def create_rezervacija(
 
     kraj = data.pocetak + timedelta(minutes=usluga.trajanje)
     _provjeri_radno_vrijeme(session, data.radnik_id, data.pocetak, kraj)
+
+    oznaci_istekle(session, data.radnik_id)
+    _zakljucaj_raspored_radnika(session, data.radnik_id)
     _provjeri_preklapanje(session, data.radnik_id, data.pocetak, kraj)
 
     rezervacija = REZERVACIJA(
@@ -87,14 +120,92 @@ def create_rezervacija(
         usluga_id=data.usluga_id,
         pocetak=data.pocetak,
         kraj=kraj,
-        status=StatusRezervacije.AKTIVNA,
+        status=StatusRezervacije.NEPOTVRDJENA,
         napomena=data.napomena,
+        rezervirano_do=datetime.now()
+        + timedelta(minutes=settings.rezervacija_rok_potvrde_minuta),
     )
     session.add(rezervacija)
     session.commit()
     session.refresh(rezervacija)
     return rezervacija
 
+def potvrdi_rezervaciju(
+    session: Session, rezervacija_id: int, korisnik: KORISNIK
+) -> REZERVACIJA:
+    rezervacija = get_rezervacija_za_korisnika(session, rezervacija_id, korisnik)
+
+    if korisnik.uloga == Uloga.RADNIK:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Rezervaciju potvrđuje klijent koji ju je kreirao.",
+        )
+
+    if rezervacija.status == StatusRezervacije.AKTIVNA:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Rezervacija je već potvrđena.",
+        )
+    if rezervacija.status == StatusRezervacije.OTKAZANA:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Otkazana rezervacija se ne može potvrditi.",
+        )
+    if rezervacija.status == StatusRezervacije.ISTEKLA:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Rok za potvrdu je istekao, termin je oslobođen.",
+        )
+
+    if (
+        rezervacija.rezervirano_do is None
+        or rezervacija.rezervirano_do <= datetime.now()
+    ):
+        rezervacija.status = StatusRezervacije.ISTEKLA
+        rezervacija.rezervirano_do = None
+        session.add(rezervacija)
+        session.commit()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Rok za potvrdu ({settings.rezervacija_rok_potvrde_minuta} min) "
+                "je istekao, termin je oslobođen."
+            ),
+        )
+
+    oznaci_istekle(session, rezervacija.radnik_id)
+    _zakljucaj_raspored_radnika(session, rezervacija.radnik_id)
+    _provjeri_preklapanje(
+        session,
+        rezervacija.radnik_id,
+        rezervacija.pocetak,
+        rezervacija.kraj,
+        izuzmi_id=rezervacija.rezervacija_id,
+    )
+
+    rezervacija.status = StatusRezervacije.AKTIVNA
+    rezervacija.rezervirano_do = None
+    session.add(rezervacija)
+    session.commit()
+    session.refresh(rezervacija)
+    return rezervacija
+
+def zauzeti_termini(session: Session, radnik_id: int, datum: date) -> list[REZERVACIJA]:
+    get_radnik_or_404(session, radnik_id)
+    oznaci_istekle(session, radnik_id)
+
+    dan_od = datetime.combine(datum, time.min)
+    stmt = (
+        select(REZERVACIJA)
+        .where(
+            REZERVACIJA.radnik_id == radnik_id,
+            REZERVACIJA.pocetak >= dan_od,
+            REZERVACIJA.pocetak < dan_od + timedelta(days=1),
+            _zauzima_termin(),
+        )
+        .order_by(REZERVACIJA.pocetak)
+    )
+    return list(session.exec(stmt).all())
 
 def list_rezervacije_za_korisnika(
     session: Session,
@@ -105,12 +216,8 @@ def list_rezervacije_za_korisnika(
     radnik_id: int | None = None,
     klijent_id: int | None = None,
 ) -> list[REZERVACIJA]:
-    """Popis rezervacija, ograničen ulogom pa dodatno filtriran.
+    oznaci_istekle(session)
 
-    Osnovni opseg po ulozi: klijent → svoje, radnik → svoje, admin → sve.
-    Filtri `radnik_id`/`klijent_id` primjenjuju se samo za admina (klijent i
-    radnik ionako vide isključivo svoje). `status_filter` i `datum` vrijede za sve.
-    """
     stmt = select(REZERVACIJA).order_by(REZERVACIJA.pocetak)
 
     if korisnik.uloga == Uloga.KLIJENT:
@@ -134,11 +241,9 @@ def list_rezervacije_za_korisnika(
 
     return list(session.exec(stmt).all())
 
-
 def get_rezervacija_za_korisnika(
     session: Session, rezervacija_id: int, korisnik: KORISNIK
 ) -> REZERVACIJA:
-    """Dohvati uz provjeru pristupa (vlasnik klijent, dodijeljeni radnik, ili admin)."""
     rezervacija = session.get(REZERVACIJA, rezervacija_id)
     if rezervacija is None:
         raise HTTPException(
@@ -151,7 +256,6 @@ def get_rezervacija_za_korisnika(
         )
     return rezervacija
 
-
 def otkazi_rezervaciju(
     session: Session, rezervacija_id: int, korisnik: KORISNIK
 ) -> REZERVACIJA:
@@ -161,12 +265,17 @@ def otkazi_rezervaciju(
             status_code=status.HTTP_409_CONFLICT,
             detail="Rezervacija je već otkazana.",
         )
+    if rezervacija.status == StatusRezervacije.ISTEKLA:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Rezervacija je istekla jer nije potvrđena na vrijeme.",
+        )
     rezervacija.status = StatusRezervacije.OTKAZANA
+    rezervacija.rezervirano_do = None
     session.add(rezervacija)
     session.commit()
     session.refresh(rezervacija)
     return rezervacija
-
 
 def _smije_pristupiti(rezervacija: REZERVACIJA, korisnik: KORISNIK) -> bool:
     if korisnik.uloga == Uloga.ADMIN:

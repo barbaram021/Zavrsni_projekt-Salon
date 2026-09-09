@@ -1,34 +1,62 @@
-"""Router za rezervacije (prefix /rezervacije)."""
-
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlmodel import Session
 
 from api.deps import get_current_user, require_role
+from core.config import settings
 from crud import rezervacija as crud
 from db.session import get_session
 from models.korisnik import KORISNIK, Uloga
 from models.rezervacija import StatusRezervacije
-from schemas.rezervacija import RezervacijaCreate, RezervacijaOut
+from schemas.rezervacija import RezervacijaCreate, RezervacijaOut, ZauzetTerminOut
 
 router = APIRouter(prefix="/rezervacije", tags=["rezervacije"])
-
 
 @router.post(
     "",
     response_model=RezervacijaOut,
     status_code=status.HTTP_201_CREATED,
-    summary="Kreiranje rezervacije (klijent)",
+    summary="Odabir termina — privremena rezervacija (klijent)",
 )
 def create_rezervacija(
     data: RezervacijaCreate,
     session: Session = Depends(get_session),
     klijent: KORISNIK = Depends(require_role(Uloga.KLIJENT)),
 ):
-    """Klijent rezervira termin; klijent_id se uzima iz tokena."""
     return crud.create_rezervacija(session, klijent.korisnik_id, data)
 
+@router.post(
+    "/{rezervacija_id}/potvrdi",
+    response_model=RezervacijaOut,
+    summary="Potvrda privremene rezervacije (u roku)",
+)
+def potvrdi_rezervaciju(
+    rezervacija_id: int,
+    session: Session = Depends(get_session),
+    korisnik: KORISNIK = Depends(get_current_user),
+):
+    return crud.potvrdi_rezervaciju(session, rezervacija_id, korisnik)
+
+@router.get(
+    "/zauzeti-termini",
+    response_model=list[ZauzetTerminOut],
+    summary="Zauzeti termini radnika na određeni dan",
+)
+def zauzeti_termini(
+    radnik_id: int = Query(description="Radnik čiji se raspored gleda"),
+    datum: date = Query(description="Dan za koji se traže zauzeti termini"),
+    session: Session = Depends(get_session),
+    _: KORISNIK = Depends(get_current_user),
+) -> list:
+    return [
+        ZauzetTerminOut(
+            pocetak=r.pocetak,
+            kraj=r.kraj,
+            privremeno=r.status == StatusRezervacije.NEPOTVRDJENA,
+        )
+        for r in crud.zauzeti_termini(session, radnik_id, datum)
+    ]
 
 @router.get(
     "",
@@ -58,6 +86,12 @@ def list_rezervacije(
         klijent_id=klijent_id,
     )
 
+@router.get(
+    "/rok-potvrde",
+    summary="Trajanje roka za potvrdu rezervacije",
+)
+def rok_potvrde() -> dict:
+    return {"minuta": settings.rezervacija_rok_potvrde_minuta}
 
 @router.get(
     "/{rezervacija_id}",
@@ -71,7 +105,6 @@ def get_rezervacija(
 ):
     return crud.get_rezervacija_za_korisnika(session, rezervacija_id, korisnik)
 
-
 @router.post(
     "/{rezervacija_id}/otkazi",
     response_model=RezervacijaOut,
@@ -82,5 +115,4 @@ def otkazi_rezervaciju(
     session: Session = Depends(get_session),
     korisnik: KORISNIK = Depends(get_current_user),
 ):
-    """Klijent otkazuje svoju, radnik svoju (kao radnik), admin bilo koju."""
     return crud.otkazi_rezervaciju(session, rezervacija_id, korisnik)
