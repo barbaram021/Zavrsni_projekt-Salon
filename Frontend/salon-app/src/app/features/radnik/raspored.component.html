@@ -1,0 +1,100 @@
+<div class="flex min-h-screen justify-center bg-krem px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+  <div
+    class="min-h-[80vh] w-full max-w-6xl overflow-hidden rounded-3xl bg-bijela-topla shadow-panel"
+  >
+    <app-zaglavlje>
+      <div class="flex items-center gap-3">
+        <span
+          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/30 font-naslov text-base font-semibold text-white"
+        >
+          {{ profil() ? inicijali(profil()!.ime, profil()!.prezime) : '' }}
+        </span>
+        <span>
+          <span class="block text-base font-semibold text-white"
+            >{{ profil()?.ime }} {{ profil()?.prezime }}</span
+          >
+          <span class="block text-[11.5px] text-white/85">{{
+            specijalnosti() || 'Bez dodijeljenih usluga'
+          }}</span>
+        </span>
+      </div>
+    </app-zaglavlje>
+
+    <div class="px-5 py-6 sm:px-7 lg:px-9 lg:py-8">
+      <h1 class="mb-4 font-naslov text-[22px] font-semibold text-tekst lg:text-[26px]">
+        Moj raspored
+      </h1>
+
+      <div class="mb-6 flex gap-2 overflow-x-auto pb-2">
+        @for (dan of dani(); track dan.getTime(); let i = $index) {
+          <button
+            type="button"
+            class="min-w-16 flex-1 shrink-0 cursor-pointer rounded-2xl border-2 px-2 py-2.5 text-center sm:min-w-20"
+            [class]="
+              odabraniDanIndeks() === i
+                ? 'border-ruza bg-ruza-tamna text-white'
+                : 'border-rub-blagi bg-white text-tekst'
+            "
+            (click)="odaberiDan(i)"
+          >
+            <span class="block text-[10.5px] uppercase opacity-85">{{
+              KRATKI_DANI[dan.getDay()]
+            }}</span>
+            <span class="mt-0.5 block text-[15px] font-semibold">{{ dan.getDate() }}</span>
+          </button>
+        }
+      </div>
+
+      @if (ucitavanje() || ucitavanjeDana()) {
+        <app-ucitavanje />
+      } @else if (redci().length === 0) {
+        <p class="py-10 text-center text-[13.5px] text-utisano">
+          Nema rezervacija za odabrani dan.
+        </p>
+      } @else {
+        <div class="grid gap-2.5 xl:grid-cols-2">
+          @for (redak of redci(); track redak.rezervacija.rezervacija_id) {
+            <div
+              class="animate-uzdizanje flex gap-4 rounded-2xl bg-mekano px-4.5 py-4"
+              [class.opacity-60]="redak.otkazana"
+            >
+              <div class="shrink-0 text-center">
+                <div class="text-[15px] font-semibold text-ruza-tamna">{{ redak.vrijeme }}</div>
+                <div class="text-[11px] text-tekst-tihi">{{ redak.vrijemeDo }}</div>
+              </div>
+
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                  <span
+                    class="text-sm font-semibold text-tekst"
+                    [class.line-through]="redak.otkazana"
+                    >{{ redak.klijent }}</span
+                  >
+                  @if (redak.telefon) {
+                    <span class="text-[11.5px] text-tekst-tihi">{{ redak.telefon }}</span>
+                  }
+                </div>
+                <div class="mt-0.5 text-xs text-tekst-blagi">{{ redak.usluga }}</div>
+
+                @if (redak.rezervacija.napomena) {
+                  <div
+                    class="mt-2 rounded-xl border border-rub bg-white px-3 py-2 text-[12px] text-tekst"
+                  >
+                    <span class="mb-0.5 block text-[10.5px] tracking-wide text-utisano uppercase"
+                      >Napomena klijenta</span
+                    >
+                    {{ redak.rezervacija.napomena }}
+                  </div>
+                }
+              </div>
+
+              <span class="shrink-0 self-start text-[11px] text-tekst-tihi">{{
+                OPIS_STATUSA[redak.rezervacija.status]
+              }}</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

@@ -1,0 +1,153 @@
+<div class="flex min-h-screen items-center justify-center bg-krem px-4 py-8 sm:px-6 lg:px-10">
+  <div
+    class="grid w-full max-w-5xl animate-uzdizanje overflow-hidden rounded-[28px] bg-white shadow-panel lg:grid-cols-[1.05fr_1fr]"
+  >
+    <!-- Brand panel — na uskim zaslonima postaje zaglavlje iznad forme. -->
+    <div
+      class="gradijent-ruza flex flex-col justify-center gap-4 px-8 py-10 text-white sm:px-12 lg:px-14 lg:py-16"
+    >
+      <div>
+        <div class="font-naslov text-4xl font-semibold tracking-wide italic lg:text-5xl">
+          Gabi&amp;Barbi
+        </div>
+        <div class="mt-1.5 text-xs tracking-[2.5px] text-white/80 uppercase">Beauty Studio</div>
+      </div>
+      <p class="max-w-md text-sm leading-relaxed text-white/90 lg:text-[15px]">
+        Rezervirajte termin za nokte, trepavice, obrve, šminkanje ili depilaciju — u nekoliko
+        klikova, bilo kada.
+      </p>
+
+    </div>
+
+    <!-- Forma -->
+    <div class="flex flex-col justify-center px-7 py-9 sm:px-10 lg:px-12 lg:py-14">
+      <div class="mx-auto w-full max-w-md">
+        <h1 class="font-naslov text-[26px] font-semibold text-tekst">
+          {{ jeRegistracija() ? 'Otvorite račun' : 'Dobrodošli natrag' }}
+        </h1>
+
+
+        <div class="mb-6 flex gap-5 border-b border-rub">
+          <button
+            type="button"
+            class="-mb-px cursor-pointer border-none bg-transparent pb-2.5 text-sm font-medium"
+            [class]="
+              nacin() === 'prijava'
+                ? 'text-sljiva border-b-2 border-ruza-tamna'
+                : 'text-utisano border-b-2 border-transparent'
+            "
+            (click)="postaviNacin('prijava')"
+          >
+            Prijava
+          </button>
+          <button
+            type="button"
+            class="-mb-px cursor-pointer border-none bg-transparent pb-2.5 text-sm font-medium"
+            [class]="
+              nacin() === 'registracija'
+                ? 'text-sljiva border-b-2 border-ruza-tamna'
+                : 'text-utisano border-b-2 border-transparent'
+            "
+            (click)="postaviNacin('registracija')"
+          >
+            Registracija
+          </button>
+        </div>
+
+        @if (jeRegistracija()) {
+          <form
+            [formGroup]="formaRegistracije"
+            class="flex flex-col gap-3.5"
+            (ngSubmit)="registriraj()"
+          >
+            <div class="grid gap-3.5 sm:grid-cols-2">
+              <input
+                class="polje-unos"
+                placeholder="Ime"
+                formControlName="ime"
+                autocomplete="given-name"
+              />
+              <input
+                class="polje-unos"
+                placeholder="Prezime"
+                formControlName="prezime"
+                autocomplete="family-name"
+              />
+              <input
+                class="polje-unos"
+                placeholder="OIB (11 znamenki)"
+                formControlName="oib"
+                inputmode="numeric"
+                maxlength="11"
+              />
+              <input
+                class="polje-unos"
+                placeholder="Broj telefona"
+                formControlName="broj_telefona"
+                autocomplete="tel"
+              />
+            </div>
+            <input
+              class="polje-unos"
+              type="email"
+              placeholder="Email"
+              formControlName="email"
+              autocomplete="email"
+            />
+            <div class="grid gap-3.5 sm:grid-cols-2">
+              <input
+                class="polje-unos"
+                type="password"
+                placeholder="Lozinka (najmanje 8 znakova)"
+                formControlName="password"
+                autocomplete="new-password"
+              />
+              <input
+                class="polje-unos"
+                type="password"
+                placeholder="Potvrdi lozinku"
+                formControlName="potvrda"
+                autocomplete="new-password"
+              />
+            </div>
+
+            @if (greska(); as poruka) {
+              <p class="text-[12.5px] text-ruza-tamna">{{ poruka }}</p>
+            }
+
+            <button type="submit" class="gumb-glavni mt-2" [disabled]="ucitavanje()">
+              {{ ucitavanje() ? 'Spremanje…' : 'Registriraj se' }}
+            </button>
+
+           
+          </form>
+        } @else {
+          <form [formGroup]="formaPrijave" class="flex flex-col gap-3.5" (ngSubmit)="prijavi()">
+            <input
+              class="polje-unos"
+              type="email"
+              placeholder="Email"
+              formControlName="email"
+              autocomplete="email"
+            />
+            <input
+              class="polje-unos"
+              type="password"
+              placeholder="Lozinka"
+              formControlName="password"
+              autocomplete="current-password"
+            />
+
+            @if (greska(); as poruka) {
+              <p class="text-[12.5px] text-ruza-tamna">{{ poruka }}</p>
+            }
+
+            <button type="submit" class="gumb-glavni mt-2" [disabled]="ucitavanje()">
+              {{ ucitavanje() ? 'Prijava…' : 'Prijavi se' }}
+            </button>
+          </form>
+        }
+      </div>
+    </div>
+  </div>
+</div>

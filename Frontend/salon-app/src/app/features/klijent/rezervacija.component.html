@@ -1,0 +1,509 @@
+<div class="flex min-h-screen justify-center bg-krem px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+  <div
+    class="flex min-h-[80vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl bg-bijela-topla shadow-panel"
+  >
+    <app-zaglavlje>
+      <div class="flex items-center gap-4">
+        <span class="font-naslov text-2xl font-semibold text-white italic">Gabi&amp;Barbi</span>
+        <a
+          routerLink="/moje-rezervacije"
+          class="rounded-full bg-white/20 px-3 py-1.5 text-xs text-white hover:bg-white/30"
+          >Moje rezervacije</a
+        >
+      </div>
+    </app-zaglavlje>
+
+    <div class="flex-1 px-5 py-6 sm:px-7 lg:px-10 lg:py-9">
+      @if (ucitavanje()) {
+        <app-ucitavanje />
+      } @else {
+        @switch (korak()) {
+          <!-- 1. Odabir kategorije usluge -->
+          @case ('usluge') {
+            <div class="animate-uzdizanje">
+              <h1 class="font-naslov text-[26px] font-semibold text-tekst lg:text-[32px]">
+                Odaberite uslugu
+              </h1>
+              <p class="mb-6 text-[13px] text-tekst-blagi">
+                Dobrodošli u Gabi&amp;Barbi studio ljepote
+              </p>
+
+              @if (kategorije().length === 0) {
+                <p class="py-10 text-center text-[13.5px] text-utisano">
+                  Trenutno nema unesenih usluga.
+                </p>
+              }
+
+              <div class="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
+                @for (kategorija of kategorije(); track kategorija.kategorija) {
+                  <button
+                    type="button"
+                    class="cursor-pointer overflow-hidden rounded-[22px] border-2 bg-mekano p-0 text-left shadow-plocica transition-shadow hover:shadow-kartica"
+                    [class]="
+                      jeOdabranaKategorija(kategorija.kategorija)
+                        ? 'border-ruza'
+                        : 'border-transparent'
+                    "
+                    (click)="otvoriKategoriju(kategorija.kategorija)"
+                  >
+                    <img
+                      [src]="kategorija.slika"
+                      [alt]="kategorija.naziv"
+                      class="aspect-[1.3/1] w-full object-cover"
+                    />
+                    <div class="px-3.5 pt-2.5 pb-4">
+                      <div class="text-sm font-semibold text-tekst">{{ kategorija.naziv }}</div>
+                      <div class="mt-0.5 text-[11px] text-utisano">{{ kategorija.opis }}</div>
+                    </div>
+                  </button>
+                }
+              </div>
+
+              @if (odabrane().length > 0) {
+                <div
+                  class="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-odabrano px-5 py-4"
+                >
+                  <div class="text-[13px] text-sljiva">
+                    {{ odabrane().length }} usluga odabrano · {{ ukupnaCijena() }}€
+                  </div>
+                  <button
+                    type="button"
+                    class="cursor-pointer rounded-xl border-none bg-ruza-tamna px-5 py-2.5 text-[12.5px] font-semibold text-white"
+                    (click)="naRadnike()"
+                  >
+                    Dalje →
+                  </button>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- 2. Odabir vrste unutar kategorije -->
+          @case ('vrste') {
+            <div class="animate-uzdizanje">
+              <button
+                type="button"
+                class="mb-2.5 cursor-pointer border-none bg-transparent p-0 text-[13px] text-utisano"
+                (click)="naKategorije()"
+              >
+                ← Natrag
+              </button>
+              <h1 class="font-naslov text-2xl font-semibold text-tekst lg:text-[28px]">
+                {{ aktivnaInfo()?.naziv }}
+              </h1>
+              <p class="mb-5 text-[13px] text-tekst-blagi">{{ aktivnaInfo()?.uputa }}</p>
+
+              <div class="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+                @for (usluga of vrsteAktivneKategorije(); track usluga.usluga_id) {
+                  <button
+                    type="button"
+                    class="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border-2 px-4.5 py-4 text-left"
+                    [class]="
+                      jeOdabranaVrsta(usluga.usluga_id)
+                        ? 'border-ruza bg-odabrano'
+                        : 'border-rub-blagi bg-white'
+                    "
+                    (click)="prebaciVrstu(usluga.usluga_id)"
+                  >
+                    <span class="min-w-0">
+                      <span class="block text-[14.5px] font-medium text-tekst">{{
+                        usluga.vrsta
+                      }}</span>
+                      <span class="mt-0.5 block text-xs text-tekst-tihi"
+                        >{{ usluga.trajanje }} min</span
+                      >
+                    </span>
+                    <span class="flex shrink-0 items-center gap-3">
+                      <span class="text-sm font-semibold text-ruza-tamna">{{ usluga.cijena }}€</span>
+                      <span
+                        class="h-5 w-5 border-2"
+                        [class]="aktivnaInfo()?.visestruko ? 'rounded-md' : 'rounded-full'"
+                        [class.border-ruza-tamna]="jeOdabranaVrsta(usluga.usluga_id)"
+                        [class.bg-ruza-tamna]="jeOdabranaVrsta(usluga.usluga_id)"
+                        [class.border-rub-jaci]="!jeOdabranaVrsta(usluga.usluga_id)"
+                      ></span>
+                    </span>
+                  </button>
+                }
+              </div>
+
+              <button
+                type="button"
+                class="gumb-glavni mt-6 max-w-xs!"
+                [disabled]="aktivneVrste().length === 0"
+                (click)="potvrdiVrste()"
+              >
+                Potvrdi
+              </button>
+            </div>
+          }
+
+          <!-- 3. Dodavanje još jedne usluge -->
+          @case ('dodaj-jos') {
+            <div class="animate-iskakanje py-[12vh] text-center">
+              <div
+                class="mx-auto mb-4.5 flex h-16 w-16 items-center justify-center rounded-full bg-odabrano text-[28px] text-ruza-tamna"
+              >
+                ✓
+              </div>
+              <h1 class="mb-1.5 font-naslov text-[22px] font-semibold text-tekst">Usluga dodana</h1>
+              <p class="mb-7 text-sm text-tekst-blagi">Želite li odabrati još jednu uslugu?</p>
+              <div class="flex flex-wrap justify-center gap-3">
+                <button
+                  type="button"
+                  class="cursor-pointer rounded-2xl border-2 border-rub-jaci bg-white px-6.5 py-3 text-sm font-semibold text-sljiva"
+                  (click)="naKategorije()"
+                >
+                  Da, dodaj
+                </button>
+                <button
+                  type="button"
+                  class="gradijent-ruza cursor-pointer rounded-2xl border-none px-6.5 py-3 text-sm font-semibold text-white"
+                  (click)="naRadnike()"
+                >
+                  Ne, nastavi
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- 4. Odabir radnika -->
+          @case ('radnik') {
+            <div class="animate-uzdizanje">
+              <button
+                type="button"
+                class="mb-2.5 cursor-pointer border-none bg-transparent p-0 text-[13px] text-utisano"
+                (click)="korak.set('dodaj-jos')"
+              >
+                ← Natrag
+              </button>
+              <h1 class="mb-5 font-naslov text-2xl font-semibold text-tekst lg:text-[28px]">
+                Odaberite radnika
+              </h1>
+
+              @if (radnici().length === 0) {
+                <p class="py-10 text-center text-[13.5px] text-utisano">
+                  Nijedan radnik ne nudi sve odabrane usluge. Uklonite neku uslugu i pokušajte
+                  ponovno.
+                </p>
+              }
+
+              <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                @for (radnik of radnici(); track radnik.korisnik_id) {
+                  <button
+                    type="button"
+                    class="flex cursor-pointer items-center gap-3.5 rounded-[18px] border-2 px-4 py-4 text-left"
+                    [class]="
+                      odabraniRadnikId() === radnik.korisnik_id
+                        ? 'border-ruza bg-odabrano'
+                        : 'border-rub-blagi bg-white'
+                    "
+                    (click)="odaberiRadnika(radnik.korisnik_id)"
+                  >
+                    <span
+                      class="flex h-11.5 w-11.5 shrink-0 items-center justify-center rounded-full font-naslov text-[17px] font-semibold text-white"
+                      [style.background]="bojaAvatara(radnik.korisnik_id)"
+                      >{{ inicijali(radnik.ime, radnik.prezime) }}</span
+                    >
+                    <span class="min-w-0 flex-1">
+                      <span class="block text-[14.5px] font-semibold text-tekst"
+                        >{{ radnik.ime }} {{ radnik.prezime }}</span
+                      >
+                      <span class="mt-0.5 block text-[11.5px] text-tekst-tihi">{{
+                        radnik.broj_telefona
+                      }}</span>
+                    </span>
+                  </button>
+                }
+              </div>
+
+              <button
+                type="button"
+                class="gumb-glavni mt-6 max-w-xs!"
+                [disabled]="odabraniRadnikId() === null"
+                (click)="naTermine()"
+              >
+                Dalje
+              </button>
+            </div>
+          }
+
+          <!-- 5. Odabir termina i napomena -->
+          @case ('termin') {
+            <div class="animate-uzdizanje">
+              <button
+                type="button"
+                class="mb-2.5 cursor-pointer border-none bg-transparent p-0 text-[13px] text-utisano"
+                (click)="korak.set('radnik')"
+              >
+                ← Natrag
+              </button>
+              <h1 class="mb-4 font-naslov text-2xl font-semibold text-tekst lg:text-[28px]">
+                Odaberite termin
+              </h1>
+
+              <div class="grid gap-7 lg:grid-cols-[1.6fr_1fr]">
+                <div>
+                  <div class="mb-4 flex gap-2 overflow-x-auto pb-2">
+                    @for (dan of dani(); track dan.getTime(); let i = $index) {
+                      <button
+                        type="button"
+                        class="min-w-14 flex-1 shrink-0 cursor-pointer rounded-2xl border-2 px-2 py-2.5 text-center sm:min-w-16"
+                        [class]="
+                          odabraniDanIndeks() === i
+                            ? 'border-ruza bg-ruza-tamna text-white'
+                            : 'border-rub-blagi bg-white text-tekst'
+                        "
+                        (click)="odaberiDan(i)"
+                      >
+                        <span class="block text-[10.5px] uppercase opacity-85">{{
+                          KRATKI_DANI[dan.getDay()]
+                        }}</span>
+                        <span class="mt-0.5 block text-[15px] font-semibold">{{
+                          dan.getDate()
+                        }}</span>
+                      </button>
+                    }
+                  </div>
+
+                  <p class="mb-3 text-xs text-tekst-tihi">
+                    Ukupno trajanje: {{ ukupnoTrajanje() }} min · {{ ukupnaCijena() }}€
+                  </p>
+
+                  @if (ucitavanjeTermina()) {
+                    <app-ucitavanje poruka="Učitavanje termina…" />
+                  } @else if (nemaRadnogVremena()) {
+                    <p class="py-10 text-center text-[13.5px] text-utisano">
+                      Radnik taj dan ne radi. Odaberite drugi dan.
+                    </p>
+                  } @else if (slotovi().length === 0) {
+                    <p class="py-10 text-center text-[13.5px] text-utisano">
+                      Za odabrani dan nema slobodnih termina dovoljnog trajanja.
+                    </p>
+                  } @else {
+                    <div class="grid grid-cols-3 gap-2.5 sm:grid-cols-5 xl:grid-cols-6">
+                      @for (slot of slotovi(); track slot.pocetak.getTime()) {
+                        <button
+                          type="button"
+                          class="rounded-xl border-2 px-1 py-2.5 text-center"
+                          [class]="
+                            !slot.slobodan
+                              ? 'cursor-not-allowed border-rub-blagi bg-[#F7EFEF] text-[#C9B4B8]'
+                              : jeOdabranTermin(slot)
+                                ? 'cursor-pointer border-ruza bg-odabrano text-tekst'
+                                : 'cursor-pointer border-rub-blagi bg-white text-tekst'
+                          "
+                          [disabled]="!slot.slobodan"
+                          (click)="odaberiTermin(slot)"
+                        >
+                          <span
+                            class="block text-[13.5px] font-medium"
+                            [class.line-through]="!slot.slobodan"
+                            >{{ slot.oznaka }}</span
+                          >
+                          <span class="block text-[10.5px] opacity-70"
+                            >do {{ slot.oznakaKraja }}</span
+                          >
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+
+                <!-- Napomena putuje uz rezervaciju do radnika. -->
+                <div class="rounded-2xl bg-mekano px-5 py-5 lg:self-start">
+                  <label for="napomena" class="mb-1.5 block text-[13.5px] font-semibold text-tekst"
+                    >Napomena</label
+                  >
+                  <p class="mb-3 text-[11.5px] text-tekst-tihi">
+                    Radnik će je vidjeti uz vaš termin — npr. alergije, željeni oblik ili boja.
+                  </p>
+                  <textarea
+                    id="napomena"
+                    rows="5"
+                    maxlength="500"
+                    class="polje-unos resize-y bg-white!"
+                    placeholder="Vaša poruka radniku…"
+                    [value]="napomena()"
+                    (input)="postaviNapomenu($any($event.target).value)"
+                  ></textarea>
+                  <p class="mt-1.5 text-right text-[11px] text-tekst-tihi">
+                    {{ napomena().length }}/500
+                  </p>
+
+                  <button
+                    type="button"
+                    class="gumb-glavni mt-4"
+                    [disabled]="odabraniTermin() === null || obrada()"
+                    (click)="naPotvrdu()"
+                  >
+                    {{ obrada() ? 'Rezerviranje…' : 'Dalje' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- 6. Sažetak, plaćanje i potvrda unutar roka -->
+          @case ('potvrda') {
+            <div class="animate-uzdizanje">
+              <button
+                type="button"
+                class="mb-2.5 cursor-pointer border-none bg-transparent p-0 text-[13px] text-utisano"
+                (click)="natragNaTermine()"
+              >
+                ← Natrag
+              </button>
+              <h1 class="mb-4 font-naslov text-2xl font-semibold text-tekst lg:text-[28px]">
+                Plaćanje
+              </h1>
+
+              <div class="grid gap-6 lg:grid-cols-2">
+                <div>
+                  <div
+                    class="mb-4 flex items-center justify-between rounded-2xl border border-rub bg-odabrano px-4 py-3 text-[12.5px] text-sljiva"
+                  >
+                    <span>Termin se drži za vas</span>
+                    <span class="font-semibold tabular-nums">{{ odbrojavanje() }}</span>
+                  </div>
+
+                  <div class="rounded-2xl bg-mekano px-5 py-4.5">
+                    @for (stavka of odabrane(); track stavka.kategorija) {
+                      <div class="flex justify-between gap-3 py-1.5 text-[13px] text-tekst">
+                        <span
+                          >{{ stavka.naziv }} —
+                          @for (
+                            usluga of stavka.usluge;
+                            track usluga.usluga_id;
+                            let zadnji = $last
+                          ) {
+                            {{ usluga.vrsta }}{{ zadnji ? '' : ', ' }}
+                          }
+                        </span>
+                        <span class="shrink-0">{{ cijenaStavke(stavka) }}€</span>
+                      </div>
+                    }
+                    <div
+                      class="mt-2 flex justify-between gap-3 border-t border-rub pt-2 text-[13px] text-sljiva"
+                    >
+                      <span>Radnik</span>
+                      <span>{{ odabraniRadnik()?.ime }} {{ odabraniRadnik()?.prezime }}</span>
+                    </div>
+                    <div class="flex justify-between gap-3 text-[13px] text-sljiva">
+                      <span>Termin</span>
+                      <span
+                        >{{ opisDatuma(odabraniDan()) }}, {{ uSatMinuta(odabraniTermin()!) }}</span
+                      >
+                    </div>
+                    @if (napomena()) {
+                      <div class="mt-2 border-t border-rub pt-2 text-[13px]">
+                        <span class="block text-[11px] text-tekst-tihi">Napomena</span>
+                        <span class="text-tekst">{{ napomena() }}</span>
+                      </div>
+                    }
+                    <div
+                      class="mt-2 flex justify-between border-t border-rub pt-2.5 text-[15px] font-semibold text-tekst"
+                    >
+                      <span>Ukupno</span>
+                      <span>{{ ukupnaCijena() }}€</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="mb-5 flex flex-col gap-2.5">
+                    @for (
+                      nacin of [
+                        { kljuc: 'kartica', naziv: 'Plaćanje karticom' },
+                        { kljuc: 'salon', naziv: 'Plaćanje u salonu' },
+                      ];
+                      track nacin.kljuc
+                    ) {
+                      <button
+                        type="button"
+                        class="flex cursor-pointer items-center gap-3 rounded-2xl border-2 px-4.5 py-4 text-left"
+                        [class]="
+                          nacinPlacanja() === nacin.kljuc
+                            ? 'border-ruza bg-odabrano'
+                            : 'border-rub-blagi bg-white'
+                        "
+                        (click)="odaberiPlacanje($any(nacin.kljuc))"
+                      >
+                        <span
+                          class="h-5 w-5 shrink-0 rounded-full border-2"
+                          [class]="
+                            nacinPlacanja() === nacin.kljuc
+                              ? 'border-ruza-tamna bg-ruza-tamna'
+                              : 'border-rub-jaci'
+                          "
+                        ></span>
+                        <span class="text-sm font-medium text-tekst">{{ nacin.naziv }}</span>
+                      </button>
+                    }
+                  </div>
+
+                  @if (nacinPlacanja() === 'kartica') {
+                    <div class="mb-5 flex animate-uzdizanje flex-col gap-2.5">
+                      <input class="polje-unos" placeholder="Broj kartice" inputmode="numeric" />
+                      <div class="flex gap-2.5">
+                        <input class="polje-unos" placeholder="MM/GG" />
+                        <input class="polje-unos" placeholder="CVC" inputmode="numeric" />
+                      </div>
+                      <p class="text-[11.5px] text-tekst-tihi">
+                        Podaci o kartici se ne šalju na poslužitelj — naplata se obavlja u salonu.
+                      </p>
+                    </div>
+                  }
+
+                  <button
+                    type="button"
+                    class="gumb-glavni"
+                    [disabled]="nacinPlacanja() === null || obrada()"
+                    (click)="potvrdiRezervaciju()"
+                  >
+                    {{ obrada() ? 'Potvrđivanje…' : 'Potvrdi rezervaciju' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- 7. Uspjeh -->
+          @case ('uspjeh') {
+            <div class="animate-iskakanje py-[12vh] text-center">
+              <div
+                class="gradijent-ruza mx-auto mb-5.5 flex h-19.5 w-19.5 items-center justify-center rounded-full text-[34px] text-white shadow-gumb"
+              >
+                ✓
+              </div>
+              <h1 class="mb-2 font-naslov text-[26px] font-semibold text-tekst">
+                Uspješno rezervirano!
+              </h1>
+              <p class="mb-1.5 text-sm text-tekst-blagi">
+                {{ odabraniRadnik()?.ime }} {{ odabraniRadnik()?.prezime }} ·
+                {{ opisDatuma(odabraniDan()) }}, {{ uSatMinuta(odabraniTermin()!) }}
+              </p>
+              <p class="mb-8 text-[13px] text-utisano">
+                Rezervaciju možete pregledati pod „Moje rezervacije”.
+              </p>
+              <div class="flex flex-wrap justify-center gap-3">
+                <a
+                  routerLink="/moje-rezervacije"
+                  class="rounded-2xl border-2 border-rub-jaci bg-white px-6.5 py-3 text-sm font-semibold text-sljiva"
+                  >Moje rezervacije</a
+                >
+                <button
+                  type="button"
+                  class="gradijent-ruza cursor-pointer rounded-2xl border-none px-6.5 py-3 text-sm font-semibold text-white"
+                  (click)="naPocetak()"
+                >
+                  Nova rezervacija
+                </button>
+              </div>
+            </div>
+          }
+        }
+      }
+    </div>
+  </div>
+</div>

@@ -1,0 +1,126 @@
+@if (ucitavanje()) {
+  <app-ucitavanje />
+} @else {
+  <div class="mb-7 grid gap-2.5 xl:grid-cols-2">
+    @if (redci().length === 0) {
+      <p class="py-8 text-center text-[13.5px] text-utisano xl:col-span-2">
+        Još nema unesenih zaposlenika.
+      </p>
+    }
+
+    @for (redak of redci(); track redak.radnik.korisnik_id) {
+      <div class="rounded-2xl bg-mekano px-4 py-3">
+        <div class="flex items-center gap-3.5">
+          <span
+            class="flex h-10.5 w-10.5 shrink-0 items-center justify-center rounded-full font-naslov text-[15px] font-semibold text-white"
+            [style.background]="bojaAvatara(redak.radnik.korisnik_id)"
+            >{{ inicijali(redak.radnik.ime, redak.radnik.prezime) }}</span
+          >
+          <span class="flex-1">
+            <span class="block text-sm font-semibold text-tekst"
+              >{{ redak.radnik.ime }} {{ redak.radnik.prezime }}</span
+            >
+            <span class="block text-[11.5px] text-tekst-tihi">
+              {{ redak.opisUsluga || 'Bez dodijeljenih usluga' }} · {{ redak.radnik.broj_telefona }}
+            </span>
+          </span>
+          <button
+            type="button"
+            class="cursor-pointer border-none bg-transparent text-[12.5px] text-[#C97F8E]"
+            (click)="prebaciDetalje(redak.radnik.korisnik_id)"
+          >
+            {{ otvoreniRadnik() === redak.radnik.korisnik_id ? 'Zatvori' : 'Uredi usluge' }}
+          </button>
+        </div>
+
+        @if (otvoreniRadnik() === redak.radnik.korisnik_id) {
+          <div class="mt-3 animate-uzdizanje border-t border-rub pt-3">
+            <p class="mb-2 text-xs text-tekst-blagi">
+              Kliknite uslugu da je dodijelite ili uklonite ovom radniku.
+            </p>
+            <div class="flex flex-wrap gap-2">
+              @for (usluga of usluge(); track usluga.usluga_id) {
+                <button
+                  type="button"
+                  class="cursor-pointer rounded-full border-2 px-3.5 py-1.5 text-xs text-tekst disabled:opacity-50"
+                  [class]="
+                    imaUslugu(redak.radnik.korisnik_id, usluga.usluga_id)
+                      ? 'border-ruza bg-odabrano'
+                      : 'border-rub bg-white'
+                  "
+                  [disabled]="spremanje()"
+                  (click)="prebaciUslugu(redak.radnik.korisnik_id, usluga)"
+                >
+                  {{ usluga.kategorija ? KATEGORIJA_NAZIV[usluga.kategorija] : 'Usluga' }} —
+                  {{ usluga.vrsta }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <form [formGroup]="forma" class="rounded-[18px] bg-krem px-5 py-5" (ngSubmit)="dodajRadnika()">
+    <h2 class="mb-3 text-[13.5px] font-semibold text-tekst">Dodaj zaposlenika</h2>
+
+    <div class="mb-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+      <input class="polje-unos bg-white!" placeholder="Ime" formControlName="ime" />
+      <input class="polje-unos bg-white!" placeholder="Prezime" formControlName="prezime" />
+      <input
+        class="polje-unos bg-white!"
+        type="email"
+        placeholder="Email"
+        formControlName="email"
+      />
+      <input
+        class="polje-unos bg-white!"
+        type="password"
+        placeholder="Lozinka (min. 8 znakova)"
+        formControlName="password"
+        autocomplete="new-password"
+      />
+      <input
+        class="polje-unos bg-white!"
+        placeholder="Broj telefona"
+        formControlName="broj_telefona"
+      />
+      <input
+        class="polje-unos bg-white!"
+        type="number"
+        min="0"
+        step="0.01"
+        placeholder="Plaća"
+        formControlName="placa"
+      />
+    </div>
+
+    <p class="mb-2 text-xs text-tekst-blagi">Usluge koje će nuditi:</p>
+    <div class="mb-3.5 flex flex-wrap gap-2">
+      @for (usluga of usluge(); track usluga.usluga_id) {
+        <button
+          type="button"
+          class="cursor-pointer rounded-full border-2 px-3.5 py-1.5 text-xs text-tekst"
+          [class]="
+            noveUsluge().includes(usluga.usluga_id)
+              ? 'border-ruza bg-odabrano'
+              : 'border-rub bg-white'
+          "
+          (click)="prebaciNovuUslugu(usluga.usluga_id)"
+        >
+          {{ usluga.kategorija ? KATEGORIJA_NAZIV[usluga.kategorija] : 'Usluga' }} —
+          {{ usluga.vrsta }}
+        </button>
+      }
+    </div>
+
+    <button
+      type="submit"
+      class="gradijent-ruza cursor-pointer rounded-xl border-none px-5.5 py-2.5 text-[13px] font-semibold text-white disabled:opacity-60"
+      [disabled]="spremanje()"
+    >
+      {{ spremanje() ? 'Spremanje…' : 'Dodaj' }}
+    </button>
+  </form>
+}

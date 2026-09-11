@@ -1,7 +1,7 @@
 from datetime import date, datetime, time, timedelta
 
 from fastapi import HTTPException, status
-from sqlalchemy import or_, text, update
+from sqlalchemy import delete, or_, text
 from sqlmodel import Session, select
 
 from core.config import settings
@@ -11,14 +11,14 @@ from models.radno_vrijeme import RADNO_VRIJEME
 from models.rezervacija import REZERVACIJA, StatusRezervacije
 from schemas.rezervacija import RezervacijaCreate
 
-def oznaci_istekle(session: Session, radnik_id: int | None = None) -> None:
-    stmt = (
-        update(REZERVACIJA)
-        .where(
-            REZERVACIJA.status == StatusRezervacije.NEPOTVRDJENA,
-            REZERVACIJA.rezervirano_do <= datetime.now(),
-        )
-        .values(status=StatusRezervacije.ISTEKLA, rezervirano_do=None)
+def obrisi_istekle(session: Session, radnik_id: int | None = None) -> None:
+    """Privremeno držanje koje nije potvrđeno u roku briše se — termin je opet slobodan.
+
+    Takav zapis nije rezervacija nego samo trag neuspjelog pokušaja, pa se ne čuva.
+    """
+    stmt = delete(REZERVACIJA).where(
+        REZERVACIJA.status == StatusRezervacije.NEPOTVRDJENA,
+        REZERVACIJA.rezervirano_do <= datetime.now(),
     )
     if radnik_id is not None:
         stmt = stmt.where(REZERVACIJA.radnik_id == radnik_id)
@@ -110,7 +110,7 @@ def create_rezervacija(
     kraj = data.pocetak + timedelta(minutes=usluga.trajanje)
     _provjeri_radno_vrijeme(session, data.radnik_id, data.pocetak, kraj)
 
-    oznaci_istekle(session, data.radnik_id)
+    obrisi_istekle(session, data.radnik_id)
     _zakljucaj_raspored_radnika(session, data.radnik_id)
     _provjeri_preklapanje(session, data.radnik_id, data.pocetak, kraj)
 
@@ -151,19 +151,11 @@ def potvrdi_rezervaciju(
             status_code=status.HTTP_409_CONFLICT,
             detail="Otkazana rezervacija se ne može potvrditi.",
         )
-    if rezervacija.status == StatusRezervacije.ISTEKLA:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Rok za potvrdu je istekao, termin je oslobođen.",
-        )
-
     if (
         rezervacija.rezervirano_do is None
         or rezervacija.rezervirano_do <= datetime.now()
     ):
-        rezervacija.status = StatusRezervacije.ISTEKLA
-        rezervacija.rezervirano_do = None
-        session.add(rezervacija)
+        session.delete(rezervacija)
         session.commit()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -173,7 +165,7 @@ def potvrdi_rezervaciju(
             ),
         )
 
-    oznaci_istekle(session, rezervacija.radnik_id)
+    obrisi_istekle(session, rezervacija.radnik_id)
     _zakljucaj_raspored_radnika(session, rezervacija.radnik_id)
     _provjeri_preklapanje(
         session,
@@ -192,7 +184,7 @@ def potvrdi_rezervaciju(
 
 def zauzeti_termini(session: Session, radnik_id: int, datum: date) -> list[REZERVACIJA]:
     get_radnik_or_404(session, radnik_id)
-    oznaci_istekle(session, radnik_id)
+    obrisi_istekle(session, radnik_id)
 
     dan_od = datetime.combine(datum, time.min)
     stmt = (
@@ -216,7 +208,7 @@ def list_rezervacije_za_korisnika(
     radnik_id: int | None = None,
     klijent_id: int | None = None,
 ) -> list[REZERVACIJA]:
-    oznaci_istekle(session)
+    obrisi_istekle(session)
 
     stmt = select(REZERVACIJA).order_by(REZERVACIJA.pocetak)
 
@@ -264,11 +256,6 @@ def otkazi_rezervaciju(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Rezervacija je već otkazana.",
-        )
-    if rezervacija.status == StatusRezervacije.ISTEKLA:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Rezervacija je istekla jer nije potvrđena na vrijeme.",
         )
     rezervacija.status = StatusRezervacije.OTKAZANA
     rezervacija.rezervirano_do = None

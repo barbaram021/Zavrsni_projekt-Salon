@@ -1,0 +1,184 @@
+@import 'tailwindcss';
+
+/* Paleta i tipografija preuzete iz dizajna (Gabi&Barbi Booking.dc.html) */
+@theme {
+  --color-krem: #faf1ee;
+  --color-bijela-topla: #fffdfc;
+  --color-ruza: #d98ca0;
+  --color-ruza-tamna: #b85e76;
+  --color-sljiva: #8c4258;
+  --color-tekst: #4a3438;
+  --color-tekst-blagi: #9c8589;
+  --color-tekst-tihi: #b0999d;
+  --color-rub: #f0dee1;
+  --color-rub-blagi: #f2e4e6;
+  --color-rub-jaci: #e3c7cc;
+  --color-odabrano: #fceef0;
+  --color-mekano: #fcf3f2;
+  --color-polje: #fcf7f6;
+  --color-utisano: #b98995;
+
+  --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+  --font-naslov: 'Cormorant Garamond', ui-serif, Georgia, serif;
+
+  --shadow-kartica: 0 20px 50px rgba(140, 66, 88, 0.1);
+  --shadow-panel: 0 24px 60px rgba(140, 66, 88, 0.14);
+  --shadow-gumb: 0 10px 24px rgba(184, 94, 118, 0.35);
+  --shadow-plocica: 0 6px 16px rgba(140, 66, 88, 0.06);
+
+  --animate-uzdizanje: uzdizanje 0.45s ease;
+  --animate-iskakanje: iskakanje 0.35s ease;
+}
+
+@keyframes uzdizanje {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes iskakanje {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-krem);
+    color: var(--color-tekst);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-rub-jaci);
+    border-radius: 10px;
+  }
+}
+
+@utility gradijent-ruza {
+  background-image: linear-gradient(135deg, #d98ca0, #b85e76);
+}
+
+/* Zajednički oblici kontrola — isti radijusi i boje kao u dizajnu. */
+@utility polje-unos {
+  width: 100%;
+  padding: 0.8125rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-rub);
+  background: var(--color-polje);
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: var(--color-tekst);
+  outline: none;
+
+  &::placeholder {
+    color: var(--color-utisano);
+  }
+
+  &:focus {
+    border-color: var(--color-ruza);
+    box-shadow: 0 0 0 3px rgba(217, 140, 160, 0.18);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+/* Select bez nativne strelice — ista geometrija kao polje-unos, uz vlastiti kljun. */
+@utility polje-odabir {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  padding: 0.8125rem 2.5rem 0.8125rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-rub);
+  background-color: var(--color-polje);
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23b85e76' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5L8 10.5L12 6.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.875rem center;
+  background-size: 1rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: var(--color-tekst);
+  cursor: pointer;
+  outline: none;
+
+  &:focus {
+    border-color: var(--color-ruza);
+    box-shadow: 0 0 0 3px rgba(217, 140, 160, 0.18);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  & option {
+    background: var(--color-bijela-topla);
+    color: var(--color-tekst);
+  }
+}
+
+/* Datum/vrijeme polja — isti okvir kao ostale kontrole, uz ružičastu ikonu. */
+@utility polje-datum {
+  padding: 0.8125rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-rub);
+  background: var(--color-polje);
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: var(--color-tekst);
+  outline: none;
+
+  &:focus {
+    border-color: var(--color-ruza);
+    box-shadow: 0 0 0 3px rgba(217, 140, 160, 0.18);
+  }
+
+  &::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.55;
+  }
+}
+
+@utility gumb-glavni {
+  width: 100%;
+  border: none;
+  border-radius: 0.875rem;
+  padding: 0.875rem 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  background-image: linear-gradient(135deg, #d98ca0, #b85e76);
+  box-shadow: var(--shadow-gumb);
+
+  &:disabled {
+    cursor: not-allowed;
+    background-image: none;
+    background-color: var(--color-rub-jaci);
+    box-shadow: none;
+  }
+}

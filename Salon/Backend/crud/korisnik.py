@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 
 from core.security import hash_password
 from models.korisnik import KLIJENT, KORISNIK, RADNIK, Uloga
+from models.rezervacija import REZERVACIJA
 from schemas.auth import RegisterKlijentIn, RegisterRadnikIn
 
 def get_korisnik_by_email(session: Session, email: str) -> KORISNIK | None:
@@ -16,6 +17,22 @@ def list_radnici(session: Session) -> list[RADNIK]:
 def list_klijenti(session: Session) -> list[KLIJENT]:
     return list(
         session.exec(select(KLIJENT).order_by(KLIJENT.prezime, KLIJENT.ime)).all()
+    )
+
+def list_klijenti_radnika(session: Session, radnik_id: int) -> list[KLIJENT]:
+    """Klijenti koji imaju barem jednu rezervaciju kod tog radnika."""
+    return list(
+        session.exec(
+            select(KLIJENT)
+            .where(
+                KLIJENT.korisnik_id.in_(
+                    select(REZERVACIJA.klijent_id).where(
+                        REZERVACIJA.radnik_id == radnik_id
+                    )
+                )
+            )
+            .order_by(KLIJENT.prezime, KLIJENT.ime)
+        ).all()
     )
 
 def get_klijent_or_404(session: Session, klijent_id: int) -> KLIJENT:

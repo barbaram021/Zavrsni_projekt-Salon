@@ -9,7 +9,6 @@ class StatusRezervacije(str, Enum):
     NEPOTVRDJENA = "NEPOTVRDJENA"
     AKTIVNA = "AKTIVNA"
     OTKAZANA = "OTKAZANA"
-    ISTEKLA = "ISTEKLA"
 
 class REZERVACIJA(SQLModel, table=True):
     __tablename__ = "rezervacija"

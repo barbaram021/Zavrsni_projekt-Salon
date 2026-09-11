@@ -1,0 +1,80 @@
+@if (radnici().length === 0 && !ucitavanje()) {
+  <p class="py-8 text-center text-[13.5px] text-utisano">
+    Prvo dodajte zaposlenika pod karticom „Zaposlenici”.
+  </p>
+} @else {
+  <div class="mb-5 flex flex-wrap items-center gap-3">
+    <label for="radnik" class="text-[13px] text-tekst-blagi">Radnik:</label>
+    <select
+      id="radnik"
+      class="polje-odabir w-auto min-w-56 bg-white!"
+      [value]="odabraniRadnikId() ?? ''"
+      (change)="promijeniRadnika($any($event.target).value)"
+    >
+      @for (radnik of radnici(); track radnik.korisnik_id) {
+        <option [value]="radnik.korisnik_id">{{ radnik.ime }} {{ radnik.prezime }}</option>
+      }
+    </select>
+  </div>
+
+  @if (ucitavanje()) {
+    <app-ucitavanje />
+  } @else {
+    <div class="flex flex-col gap-2">
+      @for (redak of redci(); track redak.dan) {
+        <div class="rounded-2xl bg-mekano px-4.5 py-3">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="w-24 text-[13.5px] font-semibold text-tekst">{{ redak.naziv }}</div>
+
+            @if (redak.intervali.length === 0) {
+              <div class="text-[13px] text-[#C9A9AF]">Zatvoreno</div>
+            } @else {
+              <div class="flex flex-wrap items-center gap-2">
+                @for (interval of redak.intervali; track interval.radno_vrijeme_id) {
+                  <span
+                    class="flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[13px] text-tekst"
+                  >
+                    {{ uSatMinuta(interval.vrijeme_od) }} – {{ uSatMinuta(interval.vrijeme_do) }}
+                    <button
+                      type="button"
+                      class="cursor-pointer border-none bg-transparent text-xs text-[#C97F8E] disabled:opacity-50"
+                      aria-label="Obriši interval"
+                      [disabled]="spremanje()"
+                      (click)="obrisi(interval)"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                }
+              </div>
+            }
+
+            <div class="flex flex-1 items-center justify-end gap-2">
+              <input
+                type="time"
+                class="polje-datum bg-white! px-3! py-2! text-[13px]!"
+                [value]="noviOd()[redak.dan] ?? ''"
+                (change)="postaviOd(redak.dan, $any($event.target).value)"
+              />
+              <span class="text-[13px] text-utisano">–</span>
+              <input
+                type="time"
+                class="polje-datum bg-white! px-3! py-2! text-[13px]!"
+                [value]="noviDo()[redak.dan] ?? ''"
+                (change)="postaviDo(redak.dan, $any($event.target).value)"
+              />
+              <button
+                type="button"
+                class="cursor-pointer rounded-2xl border-none bg-[#E5F2E8] px-3.5 py-1.5 text-xs text-[#5B8C6A] disabled:opacity-50"
+                [disabled]="spremanje()"
+                (click)="dodaj(redak.dan)"
+              >
+                Dodaj
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+}
