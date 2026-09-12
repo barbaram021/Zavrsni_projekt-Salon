@@ -6,8 +6,8 @@ uslugama, radnicima i rasporedom.
 
 Završni projekt - FastAPI (REST API) + PostgreSQL + Angular.
 
-| | |
-|---|---|
+
+
 | Frontend | https://salon-frontend-kfma.onrender.com |
 | API dokumentacija | https://salon-backend-om75.onrender.com/docs |
 
@@ -16,16 +16,16 @@ Završni projekt - FastAPI (REST API) + PostgreSQL + Angular.
 
 **Backend**
 
-| Python | 3.14
-| FastAPI | 0.139.2
-| PostgreSQL | 16+
+| Python - 3.14
+| FastAPI - 0.139.2
+| PostgreSQL - 16+
 
 **Frontend**
 
 
-| Angular | 21 
-| TypeScript | 5.9
-| Tailwind CSS | 4.3
+| Angular - 21 
+| TypeScript - 5.9
+| Tailwind CSS - 4.3
 
 ---
 
@@ -58,11 +58,11 @@ psql -U postgres -d salon -f Salon/Backend/db/baza_salon.sql
 Backend čita konfiguraciju iz `Salon/Backend/.env`. Predložak je u
 `Salon/Backend/.env.example`:
 
-| `POSTGRES_*` | podaci za spajanje na bazu |
-| `SECRET_KEY` | ključ za potpisivanje JWT tokena |
-| `ALGORITHM` | algoritam potpisa (`HS256`) |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | trajanje prijave u minutama |
-| `REZERVACIJA_ROK_POTVRDE_MINUTA` | koliko klijent ima vremena potvrditi termin |
+| `POSTGRES_*` - podaci za spajanje na bazu |
+| `SECRET_KEY` - ključ za potpisivanje JWT tokena |
+| `ALGORITHM` - algoritam potpisa (`HS256`) |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` - trajanje prijave u minutama |
+| `REZERVACIJA_ROK_POTVRDE_MINUTA` - koliko klijent ima vremena potvrditi termin |
 
 ### 3. Backend
 
@@ -85,13 +85,13 @@ cd Salon/Backend
 uvicorn main:app --reload
 ```
 
-`uvicorn` se mora pokrenuti baš iz `Salon/Backend`. Importi u kodu su apsolutni.
+`uvicorn` se mora pokrenuti baš iz `Salon/Backend`. 
 
 API je dostupan na `http://127.0.0.1:8000`:
 
-- Swagger UI — http://127.0.0.1:8000/docs
-- ReDoc — http://127.0.0.1:8000/redoc
-- Provjera baze — http://127.0.0.1:8000/health/db
+- Swagger UI - http://127.0.0.1:8000/docs
+- ReDoc - http://127.0.0.1:8000/redoc
+- Provjera baze - http://127.0.0.1:8000/health/db
 
 ### 4. Administrator
 
