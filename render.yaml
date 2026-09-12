@@ -1,0 +1,41 @@
+# Render Blueprint — Angular frontend (Static Site).
+#
+# Backend (salon-backend-om75) je vec deployan rucno preko dashboarda i
+# namjerno NIJE ovdje, da ga blueprint ne pokusa ponovno stvoriti.
+#
+# Koristenje: Render dashboard -> New -> Blueprint -> odaberi ovaj repo.
+# Ili sve isto podesi rucno prema uputama u Frontend/salon-app/DEPLOY.md.
+
+services:
+  - type: web
+    runtime: static
+    name: salon-frontend
+    rootDir: Frontend/salon-app
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist/salon-app/browser
+    envVars:
+      - key: NODE_VERSION
+        value: 24.13.0
+
+    # Angular koristi routing na klijentu (PathLocationStrategy), pa svaki
+    # URL koji nije staticka datoteka mora vratiti index.html. Bez ovoga
+    # osvjezavanje stranice na /admin ili /rezervacija daje 404.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      # Hashirani buildovi (outputHashing: all) smiju se kesirati zauvijek.
+      - path: /*.js
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*.css
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
