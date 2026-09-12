@@ -7,7 +7,8 @@ uslugama, radnicima i rasporedom.
 Završni projekt - FastAPI (REST API) + PostgreSQL + Angular.
 
 
-
+| | |
+|---|---|
 | Frontend | https://salon-frontend-kfma.onrender.com |
 | API dokumentacija | https://salon-backend-om75.onrender.com/docs |
 
