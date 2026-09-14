@@ -5,6 +5,15 @@
     <app-zaglavlje>
       <div class="flex items-center gap-4">
         <span class="font-naslov text-2xl font-semibold text-white italic">Gabi&amp;Barbi</span>
+        @if (prikaziOdustani()) {
+          <button
+            type="button"
+            class="cursor-pointer rounded-full border-none bg-white/20 px-3 py-1.5 text-xs text-white hover:bg-white/30"
+            (click)="odustaniOdRezervacije()"
+          >
+            Odustani od rezervacije
+          </button>
+        }
         <a
           routerLink="/moje-rezervacije"
           class="rounded-full bg-white/20 px-3 py-1.5 text-xs text-white hover:bg-white/30"

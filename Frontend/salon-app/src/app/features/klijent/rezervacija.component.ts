@@ -124,12 +124,17 @@ export class RezervacijaComponent implements OnDestroy {
 
   protected readonly odbrojavanje = computed(() => formatirajOdbrojavanje(this.preostaloSekundi()));
 
+  /** Prije nego korisnik uopće nešto odabere nema što otkazati. */
+  protected readonly prikaziOdustani = computed(
+    () => this.korak() !== 'usluge' && this.korak() !== 'uspjeh',
+  );
+
   constructor() {
     this.ucitajUsluge();
   }
 
   ngOnDestroy(): void {
-    this.zaustaviMjerac();
+    this.otpustiDrzanja();
   }
 
   private ucitajUsluge(): void {
@@ -519,6 +524,18 @@ export class RezervacijaComponent implements OnDestroy {
           this.obavijesti.greska(porukaGreske(greska, 'Potvrda rezervacije nije uspjela.'));
         },
       });
+  }
+
+  /**
+   * Odustajanje je dostupno u bilo kojem koraku prije plaćanja. Eventualno
+   * privremeno držanje termina oslobađa se isto kao kod isteka roka od 10 min.
+   */
+  protected odustaniOdRezervacije(): void {
+    if (this.obrada() || !confirm('Jeste li sigurni da želite odustati od rezervacije?')) {
+      return;
+    }
+    this.otpustiDrzanja();
+    this.naPocetak();
   }
 
   protected naPocetak(): void {

@@ -9,7 +9,7 @@ from crud.usluga import _veza_radnik_usluga, get_radnik_or_404, get_usluga_or_40
 from models.korisnik import KORISNIK, Uloga
 from models.radno_vrijeme import RADNO_VRIJEME
 from models.rezervacija import REZERVACIJA, StatusRezervacije
-from schemas.rezervacija import RezervacijaCreate
+from schemas.rezervacija import RezervacijaCreate, RezervacijaOut
 
 def obrisi_istekle(session: Session, radnik_id: int | None = None) -> None:
     """Privremeno držanje koje nije potvrđeno u roku briše se — termin je opet slobodan.
@@ -250,13 +250,25 @@ def get_rezervacija_za_korisnika(
 
 def otkazi_rezervaciju(
     session: Session, rezervacija_id: int, korisnik: KORISNIK
-) -> REZERVACIJA:
+) -> REZERVACIJA | RezervacijaOut:
     rezervacija = get_rezervacija_za_korisnika(session, rezervacija_id, korisnik)
     if rezervacija.status == StatusRezervacije.OTKAZANA:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Rezervacija je već otkazana.",
         )
+
+    if rezervacija.status == StatusRezervacije.NEPOTVRDJENA:
+        # Klijent je odustao prije nego što je rezervacija potvrđena (plaćena) —
+        # to se tretira jednako kao istek roka za potvrdu: zapis se briše bez
+        # traga (vidi obrisi_istekle), termin je odmah opet slobodan.
+        odgovor = RezervacijaOut.model_validate(rezervacija)
+        session.delete(rezervacija)
+        session.commit()
+        return odgovor.model_copy(
+            update={"status": StatusRezervacije.OTKAZANA, "rezervirano_do": None}
+        )
+
     rezervacija.status = StatusRezervacije.OTKAZANA
     rezervacija.rezervirano_do = None
     session.add(rezervacija)
